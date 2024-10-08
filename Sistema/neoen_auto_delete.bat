@@ -1,0 +1,1 @@
+ForFiles /p "C:\Users\Server01\GoesGreen SRL\I4 - SCADA_AUTO" /s /d -7 /c "cmd /c del /q @file"
