@@ -1,440 +1,93 @@
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+-- Crear una tabla temporal para almacenar los valores variables (cantidad de días y parte de la URL)
+CREATE TEMP TABLE temp_smec_sources (
+    days_interval text,
+    url_part text,
+    id_value text
+);
 
+-- Insertar los valores correspondientes a la cantidad de días y parte de la URL
+INSERT INTO temp_smec_sources (days_interval, url_part, id_value)
+VALUES
+('1 days', 'CAF1M71C', 'CAF1M71C'),
+('1 days', 'CAF1M71P', 'CAF1M71P'),
+('2 days', 'CAF1M71C', 'CAF1M71C'),
+('2 days', 'CAF1M71P', 'CAF1M71P'),
+('3 days', 'CAF1M71C', 'CAF1M71C'),
+('3 days', 'CAF1M71P', 'CAF1M71P'),
+('4 days', 'CAF1M71C', 'CAF1M71C'),
+('4 days', 'CAF1M71P', 'CAF1M71P'),
+('5 days', 'CAF1M71P', 'CAF1M71P'),
+('6 days', 'CAF1M71P', 'CAF1M71P'),
+('7 days', 'CAF1M71P', 'CAF1M71P');
 DO $$
-DECLARE startdate text := to_char(current_date - interval '1 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71C_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+DECLARE
+    rec RECORD;
+    startdate text;
+BEGIN
+    -- Iterar sobre cada registro de la tabla temporal
+    FOR rec IN SELECT * FROM temp_smec_sources LOOP
+        -- Calcular la fecha startdate en función de los días del intervalo
+        startdate := to_char(current_date - rec.days_interval::interval, 'YYYYMMDD');
 
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
+        -- Eliminar la tabla temporal si existe
+        DROP TABLE IF EXISTS tmp_smec_caf;
 
-UPDATE tmp_smec_caf SET id = 'CAF1M71C';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
+        -- Crear la tabla temporal tmp_smec_caf
+        CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text);
 
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
+        -- Descargar y copiar los datos desde el archivo CSVEXECUTE format(
+		EXECUTE format(
+			'COPY tmp_smec_caf (hour, "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", a, b, c, d) 
+			FROM %L DELIMITER '','' CSV HEADER',
+			'C:/Users/Administrador/GoesGreen SRL/I4 - AUTOPRN/cafayate/' || rec.url_part || '_' || startdate || '.csv'
+		);
 
+        -- Eliminar las columnas innecesarias
+        ALTER TABLE tmp_smec_caf DROP COLUMN a,DROP COLUMN b,DROP COLUMN c, DROP COLUMN d;
 
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
+        -- Actualizar la columna id con el valor correspondiente
+        EXECUTE format('UPDATE tmp_smec_caf SET id = %L', rec.id_value);
 
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+        -- Actualizar la columna date y hour
+        UPDATE tmp_smec_caf 
+        SET date = date_part.date2 
+        FROM (SELECT split_part(hour, ' ', 2) AS date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) AS date_part;
 
-DO $$
-DECLARE startdate text := to_char(current_date - interval '1 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+        UPDATE tmp_smec_caf 
+        SET hour = hour_part.hour2 
+        FROM (SELECT split_part(hour, ' ', 3) AS hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') AS hour_part 
+        WHERE tmp_smec_caf.hour = hour_part.hour;
 
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
+        -- Ajustar la hora para el valor '24:00'
+        UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
 
-UPDATE tmp_smec_caf SET id = 'CAF1M71P';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
+        -- Concatenar la fecha y la hora en la columna "Date Hour"
+        UPDATE tmp_smec_caf 
+        SET "Date Hour" = date_hour.concat 
+        FROM (SELECT CONCAT(date, ' ', hour) AS concat, hour FROM tmp_smec_caf) AS date_hour 
+        WHERE tmp_smec_caf.hour = date_hour.hour;
 
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
+        -- Cambiar el tipo de la columna "Date Hour" a timestamptz
+        ALTER TABLE tmp_smec_caf 
+        ALTER COLUMN "Date Hour" TYPE timestamptz 
+        USING to_timestamp("Date Hour", 'MM/DD/YY HH24:MI');
 
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+        -- Ajustar las filas con la hora "00:00:00"
+        UPDATE tmp_smec_caf 
+        SET "Date Hour" = date_hour."Date Hour2" 
+        FROM (SELECT ("Date Hour" + interval '1 day') AS "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour 
+        WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
 
-DO $$
-DECLARE startdate text := to_char(current_date - interval '2 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71C_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+        -- Insertar los datos en la tabla final
+        INSERT INTO smec.caf 
+        SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id 
+        FROM tmp_smec_caf 
+        ON CONFLICT DO NOTHING;
+    END LOOP;
+END $$;
 
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71C';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '2 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71P';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '3 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71C_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71C';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '3 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71P';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '4 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71C_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71C';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '4 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71P';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '5 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71P';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '6 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71P';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_caf;
-CREATE TEMP TABLE tmp_smec_caf ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '7 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_caf (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\cafayate\CAF1M71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_caf 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_caf SET id = 'CAF1M71P';
-UPDATE tmp_smec_caf SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_caf WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_caf SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_caf WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_caf.hour = hour_part.hour;
-UPDATE tmp_smec_caf SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_caf) AS date_hour WHERE tmp_smec_caf.hour = date_hour.hour;
-ALTER TABLE tmp_smec_caf ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_caf SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_caf WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_caf."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.caf SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_caf ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
+-- Eliminar la tabla temporal después de su uso
+DROP TABLE IF EXISTS temp_smec_sources;
 INSERT INTO smec.cafayate_columnas (
 	SELECT "Date Hour" FROM smec.caf WHERE ("Date Hour") NOT IN (
 		SELECT date
@@ -444,133 +97,160 @@ INSERT INTO smec.cafayate_columnas (
 
 
 ---------------------------------------------------------------------
+-- Actualiza importada_caf1m71p en smec.cafayate_columnas con los valores de "SMEC IMPORTADA"
 UPDATE smec.cafayate_columnas
 SET importada_caf1m71p = cafayate1."SMEC IMPORTADA"
 FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC IMPORTADA"
-	FROM smec.caf
-	WHERE id = 'CAF1M71P'
-	) AS cafayate1
-WHERE cafayate1.date2 = smec.cafayate_columnas.date
-	AND smec.cafayate_columnas.importada_caf1m71p IS NULL;
+    SELECT "Date Hour" AS date2, "SMEC IMPORTADA"
+    FROM smec.caf
+    WHERE id = 'CAF1M71P'
+) AS cafayate1
+WHERE cafayate1.date2 = smec.cafayate_columnas.date  
+AND smec.cafayate_columnas.importada_caf1m71p IS NULL; 
 
+-- Actualiza exportada_caf1m71p en smec.cafayate_columnas con los valores de "SMEC EXPORTADA"
 UPDATE smec.cafayate_columnas
 SET exportada_caf1m71p = cafayate1."SMEC EXPORTADA"
 FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC EXPORTADA"
-	FROM smec.caf
-	WHERE id = 'CAF1M71P'
-	) AS cafayate1
-WHERE cafayate1.date2 = smec.cafayate_columnas.date
-	AND smec.cafayate_columnas.exportada_caf1m71p IS NULL;
+    SELECT "Date Hour" AS date2, "SMEC EXPORTADA"
+    FROM smec.caf
+    WHERE id = 'CAF1M71P'
+) AS cafayate1
+WHERE cafayate1.date2 = smec.cafayate_columnas.date  
+AND smec.cafayate_columnas.exportada_caf1m71p IS NULL; 
 
+-- Actualiza importada_caf1m71c en smec.cafayate_columnas con los valores de "SMEC IMPORTADA" 
 UPDATE smec.cafayate_columnas
 SET importada_caf1m71c = cafayate1."SMEC IMPORTADA"
 FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC IMPORTADA"
-	FROM smec.caf
-	WHERE id = 'CAF1M71C'
-	) AS cafayate1
-WHERE cafayate1.date2 = smec.cafayate_columnas.date
-	AND smec.cafayate_columnas.importada_caf1m71c IS NULL;
+    SELECT "Date Hour" AS date2, "SMEC IMPORTADA"
+    FROM smec.caf
+    WHERE id = 'CAF1M71C'
+) AS cafayate1
+WHERE cafayate1.date2 = smec.cafayate_columnas.date  
+AND smec.cafayate_columnas.importada_caf1m71c IS NULL;
 
+-- Actualiza exportada_caf1m71c en la tabla smec.cafayate_columnas con los valores de "SMEC EXPORTADA"
 UPDATE smec.cafayate_columnas
 SET exportada_caf1m71c = cafayate1."SMEC EXPORTADA"
 FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC EXPORTADA"
-	FROM smec.caf
-	WHERE id = 'CAF1M71C'
-	) AS cafayate1
-WHERE cafayate1.date2 = smec.cafayate_columnas.date
-	AND smec.cafayate_columnas.exportada_caf1m71c IS NULL;
-	
--------------------------------------------------------------------------------------------------------------------------------------
-INSERT INTO smec.cafayate_columnas_diario (SELECT DATE_TRUNC('day', date) AS DATE FROM smec.cafayate_columnas GROUP BY DATE) ON CONFLICT ON CONSTRAINT uc_cafayate_columnas_diario DO NOTHING;
+    SELECT "Date Hour" AS date2, "SMEC EXPORTADA"
+    FROM smec.caf
+    WHERE id = 'CAF1M71C'
+) AS cafayate1
+WHERE cafayate1.date2 = smec.cafayate_columnas.date  
+AND smec.cafayate_columnas.exportada_caf1m71c IS NULL;
 
+-------------------------------------------------------------------------------------------------------------
+
+-- Inserta fechas unicas en smec.cafayate_columnas_diario desde smec.cafayate_columnas
+INSERT INTO smec.cafayate_columnas_diario (
+    SELECT DATE_TRUNC('day', date) AS DATE  
+    FROM smec.cafayate_columnas
+    GROUP BY DATE  
+) ON CONFLICT ON CONSTRAINT uc_cafayate_columnas_diario DO NOTHING; 
+-- Actualiza exportada_caf1m71p, exportada_caf1m71c, y dif_caf1m71 en la tabla smec.cafayate_columnas_diario
 UPDATE smec.cafayate_columnas_diario
-SET  exportada_caf1m71p = s.a
-	,exportada_caf1m71c = s.b
-	,dif_caf1m71 = s.d1
+SET 
+    exportada_caf1m71p = s.a,     
+    exportada_caf1m71c = s.b,     
+    dif_caf1m71 = s.d1
 FROM (
-	SELECT DATE_TRUNC('day', date - interval '15 minutes') AS DATE1
-		,SUM(exportada_caf1m71p) AS a
-		,SUM(exportada_caf1m71c) AS b
-		,((abs((SUM(exportada_caf1m71p) - SUM(exportada_caf1m71c))) / (COALESCE(NULLIF((SUM(exportada_caf1m71p) + SUM(exportada_caf1m71c)) / 2, 0), 1))) * 100)::NUMERIC(10, 3) AS d1
-	FROM smec.cafayate_columnas
-	GROUP BY DATE1
-	) AS s
-WHERE s.DATE1 = cafayate_columnas_diario.date;
-
+    SELECT 
+        DATE_TRUNC('day', date - interval '15 minutes') AS DATE1,
+        SUM(exportada_caf1m71p) AS a,                             
+        SUM(exportada_caf1m71c) AS b,                             
+        (
+            (abs(SUM(exportada_caf1m71p) - SUM(exportada_caf1m71c)) /   
+            COALESCE(NULLIF((SUM(exportada_caf1m71p) + SUM(exportada_caf1m71c)) / 2, 0), 1)) * 100
+        )::NUMERIC(10, 3) AS d1
+    FROM smec.cafayate_columnas
+    GROUP BY DATE1 
+) AS s
+WHERE s.DATE1 = cafayate_columnas_diario.date; 
+-- Actualiza la columna dif_caf1m71 en la tabla smec.cafayate_columnas_diario
 UPDATE smec.cafayate_columnas_diario
-SET dif_caf1m71 = 200.000
+SET dif_caf1m71 = 200.000 
 WHERE (
-		exportada_caf1m71p IS NULL
-		AND date < CURRENT_DATE
-		)
-	OR (
-		exportada_caf1m71c IS NULL
-		AND date < CURRENT_DATE
-		);
+        exportada_caf1m71p IS NULL  
+        AND date < CURRENT_DATE     
+    )
+    OR (
+        exportada_caf1m71c IS NULL  
+        AND date < CURRENT_DATE     
+    );
 
 -------------------------------------------------------------------------------------------------------------------------------------
+
+-- Elimina todos los registros de la tabla smec.cafayate_comparacion_smec_po
 DELETE FROM smec.cafayate_comparacion_smec_po;
 
-INSERT INTO smec.cafayate_comparacion_smec_po(grupo, date, po_exportada, smec_exportada, diferencia) SELECT smec.po_general_renovables.grupo
-	,smec.po_general_renovables.date_hour - interval '1 hour' as date
-	,egenerada as po_exportada
-	,exportada::numeric(10, 3) as smec_exportada
-	,(((abs((egenerada) - (a.exportada::numeric(10,3))) / (COALESCE(NULLIF(((egenerada) + (a.exportada::numeric(10,3))) / 2, 0), 1))) * 100)::NUMERIC(10, 3)) AS diferencia
+-- Inserta nuevos registros comparando las exportaciones entre po_general_renovables y cafayate_columnas
+INSERT INTO smec.cafayate_comparacion_smec_po(grupo, date, po_exportada, smec_exportada, diferencia)
+SELECT 
+    smec.po_general_renovables.grupo,                               
+    smec.po_general_renovables.date_hour - interval '1 hour' AS date,
+    egenerada AS po_exportada,                                       
+    exportada::numeric(10, 3) AS smec_exportada,                     
+    (
+        (abs((egenerada) - (a.exportada::numeric(10,3))) /           
+        COALESCE(NULLIF(((egenerada) + (a.exportada::numeric(10,3))) / 2, 0), 1)) * 100
+    )::NUMERIC(10, 3) AS diferencia                                  
 FROM smec.po_general_renovables
 LEFT JOIN (
-	SELECT DATE_TRUNC('hour', date - interval '15 minutes') AS date1
-		,(sum(exportada_caf1m71p)/1000)::numeric(10,3) AS exportada
-	FROM smec.cafayate_columnas
-	WHERE date >= DATE_TRUNC('day', now()) - interval '4 years'
-		AND date <= DATE_TRUNC('day', now())+ interval '23 hours' - interval '1 days'
-	GROUP BY date1
-	) AS a ON smec.po_general_renovables.date_hour - interval '1 hour' = a.date1
-WHERE date_hour >= DATE_TRUNC('day', now()) - interval '4 years'
-	AND date_hour <= DATE_TRUNC('day', now())+ interval '23 hours' - interval '1 days'
-	AND grupo = 'CAFAFV'
-ORDER BY grupo
-	,date_hour ON CONFLICT DO NOTHING;
-	
--------------------------------------------------------------------------------------------------------------------------------------
+    SELECT 
+        DATE_TRUNC('hour', date - interval '15 minutes') AS date1,   
+        (sum(exportada_caf1m71p)/1000)::numeric(10,3) AS exportada   
+    FROM smec.cafayate_columnas
+    WHERE date >= DATE_TRUNC('day', now()) - interval '4 years'      
+    AND date <= DATE_TRUNC('day', now()) + interval '23 hours' - interval '1 days' 
+    GROUP BY date1                                                   
+) AS a ON smec.po_general_renovables.date_hour - interval '1 hour' = a.date1 
+WHERE date_hour >= DATE_TRUNC('day', now()) - interval '4 years'     
+AND date_hour <= DATE_TRUNC('day', now()) + interval '23 hours' - interval '1 days' 
+AND grupo = 'CAFAFV'                                                 
+ORDER BY grupo, date_hour                                            
+ON CONFLICT DO NOTHING;                                              
+
+----------------------------------------------------------------
+
+-- Elimina todos los registros de la tabla smec.cafayate_comparacion_smec_po_importada
 DELETE FROM smec.cafayate_comparacion_smec_po_importada;
 
-INSERT INTO smec.cafayate_comparacion_smec_po_importada(grupo, date, po_importada, smec_importada, diferencia) SELECT smec.po_general_renovables.grupo
-	,smec.po_general_renovables.date_hour - interval '1 hour' as date
-	,compra_spot as po_importada
-	,importada::numeric(10, 3) as smec_importada
-	,(((abs((compra_spot) - (a.importada::numeric(10,3))) / (COALESCE(NULLIF(((compra_spot) + (a.importada::numeric(10,3))) / 2, 0), 1))) * 100)::NUMERIC(10, 3)) AS diferencia
+-- Inserta nuevos registros comparando las importaciones entre po_general_renovables y cafayate_columnas
+INSERT INTO smec.cafayate_comparacion_smec_po_importada(grupo, date, po_importada, smec_importada, diferencia)
+SELECT 
+    smec.po_general_renovables.grupo,                                
+    smec.po_general_renovables.date_hour - interval '1 hour' AS date, 
+    compra_spot AS po_importada,                                      
+    importada::numeric(10, 3) AS smec_importada,                      
+    (
+        (abs((compra_spot) - (a.importada::numeric(10,3))) /          
+        COALESCE(NULLIF(((compra_spot) + (a.importada::numeric(10,3))) / 2, 0), 1)) * 100
+    )::NUMERIC(10, 3) AS diferencia                                   
 FROM smec.po_general_renovables
 LEFT JOIN (
-	SELECT DATE_TRUNC('hour', date - interval '15 minutes') AS date1
-		,(sum(importada_caf1m71p)/1000)::numeric(10,3) AS importada
-	FROM smec.cafayate_columnas
-	WHERE date >= DATE_TRUNC('day', now()) - interval '4 years'
-		AND date <= DATE_TRUNC('day', now())+ interval '23 hours' - interval '1 days'
-	GROUP BY date1
-	) AS a ON smec.po_general_renovables.date_hour - interval '1 hour' = a.date1
-WHERE date_hour >= DATE_TRUNC('day', now()) - interval '4 years'
-	AND date_hour <= DATE_TRUNC('day', now())+ interval '23 hours' - interval '1 days'
-	AND grupo = 'CAFAFV'
-ORDER BY grupo
-	,date_hour ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------------CONSOLIDADOR-------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
+    
+    SELECT 
+        DATE_TRUNC('hour', date - interval '15 minutes') AS date1,    
+        (sum(importada_caf1m71p)/1000)::numeric(10,3) AS importada    
+    FROM smec.cafayate_columnas
+    WHERE date >= DATE_TRUNC('day', now()) - interval '4 years'       
+    AND date <= DATE_TRUNC('day', now()) + interval '23 hours' - interval '1 days' 
+    GROUP BY date1                                                    
+) AS a ON smec.po_general_renovables.date_hour - interval '1 hour' = a.date1 -
+WHERE date_hour >= DATE_TRUNC('day', now()) - interval '4 years'      
+AND date_hour <= DATE_TRUNC('day', now()) + interval '23 hours' - interval '1 days' 
+AND grupo = 'CAFAFV'                                                  
+ORDER BY grupo, date_hour                                             
+ON CONFLICT DO NOTHING;                                               
 
+--------------------------------CONSOLIDADOR------------------------------------------------
 DROP TABLE IF EXISTS smec.consolidador_caf;
-CREATE TABLE smec.consolidador_caf (date timestamptz, caf text, exportada_cammesa numeric(10, 3), exportada_scada numeric(10, 3), po_exportada numeric(10, 3));
+CREATE TABLE smec.consolidador_caf (date timestamptz, caf text, exportada_cammesa numerc(10, 3), exportada_scada numeric(10, 3), p_exportada numeric(10, 3));
 
 CREATE UNIQUE INDEX unique_caf_consolidador ON smec.consolidador_caf (date) WHERE ("caf" = 'CAFAFV');
-
-DROP TABLE IF EXISTS consolidador_caf_temp;
+DRP TABLE IF EXISTSconsolidador_caf_temp;
 CREATE TEMP TABLE consolidador_caf_temp (date timestamptz, caf text, exportada_cammesa numeric);
 INSERT INTO consolidador_caf_temp(date, exportada_cammesa) SELECT DATE_TRUNC('hour',date) as date2, SUM(exportada_caf1m71p) FROM smec.cafayate_columnas WHERE date < '2022-02-26 00:00:00-03' GROUP BY date2 order by date2;
 INSERT INTO consolidador_caf_temp(date, exportada_cammesa) SELECT DATE_TRUNC('hour',date - interval '15 minutes') as date2, SUM(exportada_caf1m71p) FROM smec.cafayate_columnas WHERE date >= '2022-02-26 00:00:00-03' GROUP BY date2 order by date2;

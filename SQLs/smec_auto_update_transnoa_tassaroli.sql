@@ -1,210 +1,91 @@
+-- Crear una tabla temporal para almacenar los intervalos de días
+CREATE TEMP TABLE temp_dates (
+    days_interval text
+);
 
-DROP TABLE IF EXISTS tmp_smec_tassaroli;
-CREATE TEMP TABLE tmp_smec_tassaroli ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '1 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_tassaroli (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\tassaroli\HELIM71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_tassaroli 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_tassaroli SET id = 'HESRFV';
-UPDATE tmp_smec_tassaroli SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_tassaroli WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_tassaroli SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_tassaroli WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_tassaroli.hour = hour_part.hour;
-UPDATE tmp_smec_tassaroli SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_tassaroli) AS date_hour WHERE tmp_smec_tassaroli.hour = date_hour.hour;
-ALTER TABLE tmp_smec_tassaroli ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_tassaroli WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_tassaroli."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.tassaroli SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_tassaroli ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_tassaroli;
-CREATE TEMP TABLE tmp_smec_tassaroli ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+-- Insertar los intervalos de días
+INSERT INTO temp_dates (days_interval)
+VALUES
+    ('1 days'),
+    ('2 days'),
+	('3 days'),
+	('4 days'),
+	('5 days');
 
 DO $$
-DECLARE startdate text := to_char(current_date - interval '2 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_tassaroli (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\tassaroli\HELIM71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+DECLARE
+    rec RECORD;
+    startdate text;
+BEGIN
+    -- Iterar sobre cada intervalo de días
+    FOR rec IN SELECT * FROM temp_dates LOOP
+        -- Calcular el valor de startdate
+        startdate := to_char(current_date - rec.days_interval::interval, 'YYYYMMDD');
 
-ALTER TABLE tmp_smec_tassaroli 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
+        -- Eliminar la tabla temporal si ya existe
+        DROP TABLE IF EXISTS tmp_smec_tassaroli;
 
-UPDATE tmp_smec_tassaroli SET id = 'HESRFV';
-UPDATE tmp_smec_tassaroli SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_tassaroli WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_tassaroli SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_tassaroli WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_tassaroli.hour = hour_part.hour;
-UPDATE tmp_smec_tassaroli SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_tassaroli) AS date_hour WHERE tmp_smec_tassaroli.hour = date_hour.hour;
-ALTER TABLE tmp_smec_tassaroli ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
+        -- Crear la tabla temporal tmp_smec_tassaroli
+        CREATE TEMP TABLE tmp_smec_tassaroli ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text);
 
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_tassaroli WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_tassaroli."Date Hour"::text LIKE '% 00:00:00%';
+        -- Descargar y copiar los datos desde el archivo CSV
+		EXECUTE format(
+			'COPY tmp_smec_tassaroli (hour, "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", a, b, c, d) 
+			FROM %L DELIMITER '','' CSV HEADER',
+			'C:/Users/Administrador/GoesGreen SRL/I4 - AUTOPRN/tassaroli/HELIM71P_' || startdate || '.csv'
+		);
 
-INSERT INTO smec.tassaroli SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_tassaroli ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
 
--------------------------------------------------------------------------------------------------------------------------------------
+        -- Eliminar las columnas innecesarias
+        ALTER TABLE tmp_smec_tassaroli 
+        DROP COLUMN a,
+        DROP COLUMN b,
+        DROP COLUMN c,
+        DROP COLUMN d;
 
-DROP TABLE IF EXISTS tmp_smec_tassaroli;
-CREATE TEMP TABLE tmp_smec_tassaroli ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+        -- Actualizar la columna id
+        UPDATE tmp_smec_tassaroli SET id = 'HESRFV';
 
-DO $$
-DECLARE startdate text := to_char(current_date - interval '3 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_tassaroli (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\tassaroli\HELIM71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+        -- Actualizar la columna date y hour
+        UPDATE tmp_smec_tassaroli 
+        SET date = date_part.date2 
+        FROM (SELECT split_part(hour, ' ', 2) AS date2 FROM tmp_smec_tassaroli WHERE hour LIKE '%/%' LIMIT 1) AS date_part;
 
-ALTER TABLE tmp_smec_tassaroli 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
+        UPDATE tmp_smec_tassaroli 
+        SET hour = hour_part.hour2 
+        FROM (SELECT split_part(hour, ' ', 3) AS hour2, hour FROM tmp_smec_tassaroli WHERE hour LIKE '%/%') AS hour_part 
+        WHERE tmp_smec_tassaroli.hour = hour_part.hour;
 
-UPDATE tmp_smec_tassaroli SET id = 'HESRFV';
-UPDATE tmp_smec_tassaroli SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_tassaroli WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_tassaroli SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_tassaroli WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_tassaroli.hour = hour_part.hour;
-UPDATE tmp_smec_tassaroli SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_tassaroli) AS date_hour WHERE tmp_smec_tassaroli.hour = date_hour.hour;
-ALTER TABLE tmp_smec_tassaroli ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
+        -- Ajustar la hora para el valor '24:00'
+        UPDATE tmp_smec_tassaroli SET hour = '00:00' WHERE hour LIKE '24%';
 
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_tassaroli WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_tassaroli."Date Hour"::text LIKE '% 00:00:00%';
+        -- Concatenar la fecha y la hora en la columna "Date Hour"
+        UPDATE tmp_smec_tassaroli 
+        SET "Date Hour" = date_hour.concat 
+        FROM (SELECT CONCAT(date, ' ', hour) AS concat, hour FROM tmp_smec_tassaroli) AS date_hour 
+        WHERE tmp_smec_tassaroli.hour = date_hour.hour;
 
-INSERT INTO smec.tassaroli SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_tassaroli ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
+        -- Cambiar el tipo de la columna "Date Hour" a timestamptz
+        ALTER TABLE tmp_smec_tassaroli 
+        ALTER COLUMN "Date Hour" TYPE timestamptz 
+        USING to_timestamp("Date Hour", 'MM/DD/YY HH24:MI');
 
-DROP TABLE IF EXISTS tmp_smec_tassaroli;
-CREATE TEMP TABLE tmp_smec_tassaroli ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+        -- Ajustar las filas con la hora "00:00:00"
+        UPDATE tmp_smec_tassaroli 
+        SET "Date Hour" = date_hour."Date Hour2" 
+        FROM (SELECT ("Date Hour" + interval '1 day') AS "Date Hour2" FROM tmp_smec_tassaroli WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour 
+        WHERE tmp_smec_tassaroli."Date Hour"::text LIKE '% 00:00:00%';
 
-DO $$
-DECLARE startdate text := to_char(current_date - interval '4 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_tassaroli (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\tassaroli\HELIM71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+        -- Insertar los datos en la tabla final
+        INSERT INTO smec.tassaroli 
+        SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id 
+        FROM tmp_smec_tassaroli 
+        ON CONFLICT DO NOTHING;
+    END LOOP;
+END $$;
 
-ALTER TABLE tmp_smec_tassaroli 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_tassaroli SET id = 'HESRFV';
-UPDATE tmp_smec_tassaroli SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_tassaroli WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_tassaroli SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_tassaroli WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_tassaroli.hour = hour_part.hour;
-UPDATE tmp_smec_tassaroli SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_tassaroli) AS date_hour WHERE tmp_smec_tassaroli.hour = date_hour.hour;
-ALTER TABLE tmp_smec_tassaroli ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_tassaroli WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_tassaroli."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.tassaroli SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_tassaroli ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_tassaroli;
-CREATE TEMP TABLE tmp_smec_tassaroli ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '5 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_tassaroli (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\tassaroli\HELIM71P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_tassaroli 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_tassaroli SET id = 'HESRFV';
-UPDATE tmp_smec_tassaroli SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_tassaroli WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_tassaroli SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_tassaroli WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_tassaroli.hour = hour_part.hour;
-UPDATE tmp_smec_tassaroli SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_tassaroli) AS date_hour WHERE tmp_smec_tassaroli.hour = date_hour.hour;
-ALTER TABLE tmp_smec_tassaroli ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_tassaroli SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_tassaroli WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_tassaroli."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.tassaroli SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_tassaroli ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
+-- Eliminar la tabla temporal después de su uso
+DROP TABLE IF EXISTS temp_dates;
 
 -------------------------------------------------------------------------------------------------------------------------------------
 INSERT INTO smec.tassaroli_columnas (

@@ -1,558 +1,97 @@
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+-- Crear una tabla temporal para almacenar los valores variables (cantidad de días y parte de la URL)
+CREATE TEMP TABLE temp_smec_sources (
+    days_interval text,
+    url_part text,
+    id_value text
+);
+
+-- Insertar los valores correspondientes a la cantidad de días y parte de la URL
+INSERT INTO temp_smec_sources (days_interval, url_part, id_value)
+VALUES
+('1 days', 'PERGM21P', 'PERGM21P'),
+('1 days', 'VENTM21P', 'VENTM21P'),
+('2 days', 'PERGM21P', 'PERGM21P'),
+('2 days', 'VENTM21P', 'VENTM21P'),
+('3 days', 'PERGM21P', 'PERGM21P'),
+('3 days', 'VENTM21P', 'VENTM21P'),
+('4 days', 'PERGM21P', 'PERGM21P'),
+('4 days', 'VENTM21P', 'VENTM21P'),
+('5 days', 'PERGM21P', 'PERGM21P'),
+('5 days', 'VENTM21P', 'VENTM21P'),
+('6 days', 'PERGM21P', 'PERGM21P'),
+('6 days', 'VENTM21P', 'VENTM21P'),
+('7 days', 'PERGM21P', 'PERGM21P'),
+('7 days', 'VENTM21P', 'VENTM21P');
 
 DO $$
-DECLARE startdate text := to_char(current_date - interval '1 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\PERGM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'PERGM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '1 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\VENTM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'VENTM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '2 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\PERGM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'PERGM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '2 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\VENTM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'VENTM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '3 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\PERGM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'PERGM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '3 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\VENTM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'VENTM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '4 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\PERGM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'PERGM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '4 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\VENTM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'VENTM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '5 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\PERGM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'PERGM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '5 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\VENTM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'VENTM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '6 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\PERGM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'PERGM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '6 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\VENTM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'VENTM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '7 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\PERGM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'PERGM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_seeds;
-CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '7 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_seeds (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\seeds\VENTM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_seeds 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_seeds SET id = 'VENTM21P';
-UPDATE tmp_smec_seeds SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_seeds SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_seeds.hour = hour_part.hour;
-UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_seeds) AS date_hour WHERE tmp_smec_seeds.hour = date_hour.hour;
-ALTER TABLE tmp_smec_seeds ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_seeds SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.seeds SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_seeds ON CONFLICT DO NOTHING;
+DECLARE
+    rec RECORD;
+    startdate text;
+BEGIN
+    -- Iterar sobre cada registro de la tabla temporal
+    FOR rec IN SELECT * FROM temp_smec_sources LOOP
+        -- Calcular la fecha startdate en función de los días del intervalo
+        startdate := to_char(current_date - rec.days_interval::interval, 'YYYYMMDD');
+
+        -- Eliminar la tabla temporal si existe
+        DROP TABLE IF EXISTS tmp_smec_seeds;
+
+        -- Crear la tabla temporal tmp_smec_seeds
+        CREATE TEMP TABLE tmp_smec_seeds ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text);
+
+        -- Descargar y copiar los datos desde el archivo CSV
+			EXECUTE format(
+				'COPY tmp_smec_seeds (hour, "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", a, b, c, d) 
+				FROM %L DELIMITER '','' CSV HEADER',
+				format('C:/Users/Administrador/GoesGreen SRL/I4 - AUTOPRN/seeds/%s_%s.csv', rec.url_part, startdate)
+			);
+
+        -- Eliminar las columnas innecesarias
+        ALTER TABLE tmp_smec_seeds DROP COLUMN a,DROP COLUMN b,DROP COLUMN c, DROP COLUMN d;
+
+        -- Actualizar la columna id con el valor correspondiente
+        EXECUTE format('UPDATE tmp_smec_seeds SET id = %L', rec.id_value);
+
+        -- Actualizar la columna date y hour
+        UPDATE tmp_smec_seeds 
+        SET date = date_part.date2 
+        FROM (SELECT split_part(hour, ' ', 2) AS date2 FROM tmp_smec_seeds WHERE hour LIKE '%/%' LIMIT 1) AS date_part;
+
+        UPDATE tmp_smec_seeds 
+        SET hour = hour_part.hour2 
+        FROM (SELECT split_part(hour, ' ', 3) AS hour2, hour FROM tmp_smec_seeds WHERE hour LIKE '%/%') AS hour_part 
+        WHERE tmp_smec_seeds.hour = hour_part.hour;
+
+        -- Ajustar la hora para el valor '24:00'
+        UPDATE tmp_smec_seeds SET hour = '00:00' WHERE hour LIKE '24%';
+
+        -- Concatenar la fecha y la hora en la columna "Date Hour"
+        UPDATE tmp_smec_seeds 
+        SET "Date Hour" = date_hour.concat 
+        FROM (SELECT CONCAT(date, ' ', hour) AS concat, hour FROM tmp_smec_seeds) AS date_hour 
+        WHERE tmp_smec_seeds.hour = date_hour.hour;
+
+        -- Cambiar el tipo de la columna "Date Hour" a timestamptz
+        ALTER TABLE tmp_smec_seeds 
+        ALTER COLUMN "Date Hour" TYPE timestamptz 
+        USING to_timestamp("Date Hour", 'MM/DD/YY HH24:MI');
+
+        -- Ajustar las filas con la hora "00:00:00"
+        UPDATE tmp_smec_seeds 
+        SET "Date Hour" = date_hour."Date Hour2" 
+        FROM (SELECT ("Date Hour" + interval '1 day') AS "Date Hour2" FROM tmp_smec_seeds WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour 
+        WHERE tmp_smec_seeds."Date Hour"::text LIKE '% 00:00:00%';
+
+        -- Insertar los datos en la tabla final
+        INSERT INTO smec.seeds 
+        SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id 
+        FROM tmp_smec_seeds 
+        ON CONFLICT DO NOTHING;
+    END LOOP;
+END $$;
+
+-- Eliminar la tabla temporal después de su uso
+DROP TABLE IF EXISTS temp_smec_sources;
 -------------------------------------------------------------------------------------------------------------------------------------
 INSERT INTO smec.seeds_columnas (
 	SELECT "Date Hour" FROM smec.seeds WHERE ("Date Hour") NOT IN (
@@ -563,50 +102,50 @@ INSERT INTO smec.seeds_columnas (
 
 
 ---------------------------------------------------------------------
-UPDATE smec.seeds_columnas
-SET importada_vt = seeds1."SMEC IMPORTADA"
-FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC IMPORTADA"
-	FROM smec.seeds
-	WHERE id = 'VENTM21P'
-	) AS seeds1
-WHERE seeds1.date2 = smec.seeds_columnas.date
-	AND smec.seeds_columnas.importada_vt IS NULL;
+-- Crear una tabla temporal para almacenar los pares de columnas y sus IDs
+CREATE TEMP TABLE temp_seeds_columns (
+    column_to_update text,
+    column_to_select text,
+    id_value text
+);
 
-UPDATE smec.seeds_columnas
-SET exportada_vt = seeds1."SMEC EXPORTADA"
-FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC EXPORTADA"
-	FROM smec.seeds
-	WHERE id = 'VENTM21P'
-	) AS seeds1
-WHERE seeds1.date2 = smec.seeds_columnas.date
-	AND smec.seeds_columnas.exportada_vt IS NULL;
+-- Insertar los valores correspondientes a las columnas e IDs
+INSERT INTO temp_seeds_columns (column_to_update, column_to_select, id_value)
+VALUES
+    ('importada_vt', 'SMEC IMPORTADA', 'VENTM21P'),
+    ('exportada_vt', 'SMEC EXPORTADA', 'VENTM21P'),
+    ('importada_perg', 'SMEC IMPORTADA', 'PERGM21P'),
+    ('exportada_perg', 'SMEC EXPORTADA', 'PERGM21P');
 
-UPDATE smec.seeds_columnas
-SET importada_perg = seeds1."SMEC IMPORTADA"
-FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC IMPORTADA"
-	FROM smec.seeds
-	WHERE id = 'PERGM21P'
-	) AS seeds1
-WHERE seeds1.date2 = smec.seeds_columnas.date
-	AND smec.seeds_columnas.importada_perg IS NULL;
+DO $$
+DECLARE
+    rec RECORD;
+BEGIN
+    -- Iterar sobre cada registro de la tabla temporal
+    FOR rec IN SELECT * FROM temp_seeds_columns LOOP
+        -- Ejecutar la actualización dinámica
+        EXECUTE format(
+            'UPDATE smec.seeds_columnas
+            SET %I = seeds1.%I
+            FROM (
+                SELECT "Date Hour" AS date2, %I
+                FROM smec.seeds
+                WHERE id = %L
+            ) AS seeds1
+            WHERE seeds1.date2 = smec.seeds_columnas.date
+            AND smec.seeds_columnas.%I IS NULL',
+            rec.column_to_update,
+            rec.column_to_select,
+            rec.column_to_select,
+            rec.id_value,
+            rec.column_to_update
+        );
+    END LOOP;
+END $$;
 
-UPDATE smec.seeds_columnas
-SET exportada_perg = seeds1."SMEC EXPORTADA"
-FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC EXPORTADA"
-	FROM smec.seeds
-	WHERE id = 'PERGM21P'
-	) AS seeds1
-WHERE seeds1.date2 = smec.seeds_columnas.date
-	AND smec.seeds_columnas.exportada_perg IS NULL;
-	
+-- Eliminar la tabla temporal después de su uso
+DROP TABLE IF EXISTS temp_seeds_columns;
+
 -------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------------------------------------------------------------

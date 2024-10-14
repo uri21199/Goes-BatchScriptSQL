@@ -1,203 +1,60 @@
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
+-- Crear tabla temporal para las rutas de los archivos CSV
+CREATE TEMP TABLE resumen_seeds_sources (url text);
 
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\0.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
+-- Insertar las rutas de los archivos CSV en la tabla temporal
+INSERT INTO resumen_seeds_sources (url)
+VALUES
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\0.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\1.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\2.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\3.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\4.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\5.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\6.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\7.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\8.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\9.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\10.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\11.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\12.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\13.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\14.csv'),
+('C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\15.csv');
 
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\1.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
+DO $$ 
+BEGIN
+    FOR rec IN SELECT * FROM resumen_seeds_sources LOOP
+        -- Eliminar tablas temporales si existen
+        DROP TABLE IF EXISTS tmp_ocr_seeds;
 
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\2.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
+        -- Crear tabla temporal
+        CREATE TEMP TABLE tmp_ocr_seeds (
+            fecha_vto date,
+            tipo_suc text,
+            num_doc integer,
+            imp_neto numeric,
+            iva numeric,
+            iva_perc numeric,
+            fnee text,
+            l_23_681 text,
+            fl_m_sj text,
+            monto_total numeric,
+            detalle text,
+            id integer
+        );
 
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\3.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
+        -- Cargar los datos desde el archivo CSV
+        EXECUTE format(
+            'COPY tmp_ocr_seeds FROM %L WITH (FORMAT CSV, DELIMITER '';'', NULL ''nan'', HEADER)',
+            rec.url
+        );
 
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
+        -- Insertar los datos finales en la tabla bmem.seeds_resumen
+        INSERT INTO bmem.seeds_resumen  
+        SELECT * FROM tmp_ocr_seeds 
+        ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
+    END LOOP;
+END $$;
 
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\4.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\5.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\6.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\7.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\8.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\9.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\10.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\11.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\12.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\13.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\14.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\15.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\16.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\17.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\18.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\19.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\20.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
-DROP TABLE IF EXISTS tmp_ocr_seeds;
-CREATE TEMP TABLE tmp_ocr_seeds (n text, fecha_vto date, tipo_suc text, num_doc integer, imp_neto numeric, iva numeric, iva_perc numeric, fnee text, l_23_681 text, fl_m_sj text, monto_total numeric, detalle text, id integer);
-
-COPY tmp_ocr_seeds 
-FROM 'C:\Users\Administrador\Desktop\bmem\Seeds AM - BD para importar - no tocar\import\21.csv'
-DELIMITER ';' NULL AS 'nan'
-CSV HEADER ;
-ALTER TABLE tmp_ocr_seeds DROP COLUMN n;
-INSERT INTO bmem.seeds_resumen SELECT * from tmp_ocr_seeds ON CONFLICT ON CONSTRAINT uc_seeds_resumen DO NOTHING;
+-- Eliminar la tabla temporal de fuentes
+DROP TABLE resumen_seeds_sources;

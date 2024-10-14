@@ -2596,8 +2596,9 @@ UPDATE tmp_smec_cau SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date
 
 INSERT INTO smec.cauchari SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id FROM tmp_smec_cau ON CONFLICT DO NOTHING;
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 UPDATE smec.cauchari_columnas
-SET entrante_yex = cauchari1."SMEC IMPORTADA"
+SET salida_yex = cauchari1."SMEC IMPORTADA"
 FROM (
 	SELECT "Date Hour" AS date2
 		,"SMEC IMPORTADA"
@@ -2605,47 +2606,36 @@ FROM (
 	WHERE id = 'YEXCA01P'
 	) AS cauchari1
 WHERE cauchari1.date2 = smec.cauchari_columnas."Date Hour"
-	AND smec.cauchari_columnas.entrante_yex IS NULL;
-
-UPDATE smec.cauchari_columnas
-SET salida_yex = cauchari1."SMEC EXPORTADA"
-FROM (
-	SELECT "Date Hour" AS date2
-		,"SMEC EXPORTADA"
-	FROM smec.cauchari
-	WHERE id = 'YEXCA01P'
-	) AS cauchari1
-WHERE cauchari1.date2 = smec.cauchari_columnas."Date Hour"
 	AND smec.cauchari_columnas.salida_yex IS NULL;
 	
 ----------------------------------------------------------------------------------------
-UPDATE smec.cauchari_columnas SET "SALIDA_CAU1M72P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU1M72C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "SALIDA_CAU1M72P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "SALIDA_CAU1M73P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU1M73C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "SALIDA_CAU1M73P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "SALIDA_CAU2M74P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU2M74C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "SALIDA_CAU2M74P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "SALIDA_CAU3M75P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU3M75C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "SALIDA_CAU3M75P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "SALIDA_CAU1M71P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU1M71C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "SALIDA_CAU1M71P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "SALIDA_CAU1M72P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU1M72C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "SALIDA_CAU1M72P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "SALIDA_CAU1M73P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU1M73C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "SALIDA_CAU1M73P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "SALIDA_CAU2M74P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU2M74C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "SALIDA_CAU2M74P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "SALIDA_CAU3M75P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU3M75C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "SALIDA_CAU3M75P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "SALIDA_CAU1M71P" = s.a FROM (SELECT "Date Hour", "SALIDA_CAU1M71C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "SALIDA_CAU1M71P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
 
-UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU1M72P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU1M72C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "ENTRANTE_CAU1M72P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU1M73P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU1M73C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "ENTRANTE_CAU1M73P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU2M74P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU2M74C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "ENTRANTE_CAU2M74P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU3M75P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU3M75C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "ENTRANTE_CAU3M75P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
-UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU1M71P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU1M71C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '5 days') as s WHERE "ENTRANTE_CAU1M71P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU1M72P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU1M72C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "ENTRANTE_CAU1M72P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU1M73P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU1M73C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "ENTRANTE_CAU1M73P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU2M74P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU2M74C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "ENTRANTE_CAU2M74P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU3M75P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU3M75C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "ENTRANTE_CAU3M75P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
+UPDATE smec.cauchari_columnas SET "ENTRANTE_CAU1M71P" = s.a FROM (SELECT "Date Hour", "ENTRANTE_CAU1M71C" as a FROM smec.cauchari_columnas WHERE "Date Hour" > now() - interval '6 days') as s WHERE "ENTRANTE_CAU1M71P" IS NULL AND s."Date Hour" = cauchari_columnas."Date Hour";
 
-UPDATE smec.cauchari_columnas SET gen_iny = CASE WHEN (cau1m71P_neto + salida_yex) > 0 THEN (cau1m71P_neto + salida_yex) else 0 END WHERE "Date Hour" > now() - interval '5 days';
+UPDATE smec.cauchari_columnas SET gen_iny = CASE WHEN (cau1m71P_neto + salida_yex) > 0 THEN (cau1m71P_neto + salida_yex) else 0 END WHERE "Date Hour" > now() - interval '6 days';
 
-UPDATE smec.cauchari_columnas SET cspot_iny = (CASE WHEN (cau1m71P_neto + salida_yex) < 0 THEN (cau1m71P_neto + salida_yex) else 0 END)* -1 WHERE "Date Hour" > now() - interval '5 days';
+UPDATE smec.cauchari_columnas SET cspot_iny = (CASE WHEN (cau1m71P_neto + salida_yex) < 0 THEN (cau1m71P_neto + salida_yex) else 0 END)* -1 WHERE "Date Hour" > now() - interval '6 days';
 
-UPDATE smec.cauchari_columnas SET gen_grupos = CASE WHEN (GREATEST( cau1m72P_neto + cau1m73P_neto, 0 ) + GREATEST( cau2m74P_neto, 0 ) + GREATEST( cau3m75P_neto + salida_yex, 0 ) ) = 0 THEN 1 ELSE (GREATEST( cau1m72P_neto + cau1m73P_neto, 0 ) + GREATEST( cau2m74P_neto, 0 ) + GREATEST( cau3m75P_neto + salida_yex, 0 ) ) END WHERE "Date Hour" > now() - interval '5 days';
+UPDATE smec.cauchari_columnas SET gen_grupos = CASE WHEN (GREATEST( cau1m72P_neto + cau1m73P_neto, 0 ) + GREATEST( cau2m74P_neto, 0 ) + GREATEST( cau3m75P_neto + salida_yex, 0 ) ) = 0 THEN 1 ELSE (GREATEST( cau1m72P_neto + cau1m73P_neto, 0 ) + GREATEST( cau2m74P_neto, 0 ) + GREATEST( cau3m75P_neto + salida_yex, 0 ) ) END WHERE "Date Hour" > now() - interval '6 days';
 
-UPDATE smec.cauchari_columnas SET cspot_grupos = CASE WHEN (LEAST( cau1m72P_neto + cau1m73P_neto, 0 )* -1 - LEAST( cau2m74P_neto, 0 ) - LEAST( cau3m75P_neto + salida_yex, 0 ) ) = 0 THEN 1 ELSE (LEAST( cau1m72P_neto + cau1m73P_neto, 0 )* -1 - LEAST( cau2m74P_neto, 0 ) - LEAST( cau3m75P_neto + salida_yex, 0 ) ) END WHERE "Date Hour" > now() - interval '5 days';
+UPDATE smec.cauchari_columnas SET cspot_grupos = CASE WHEN (LEAST( cau1m72P_neto + cau1m73P_neto, 0 )* -1 - LEAST( cau2m74P_neto, 0 ) - LEAST( cau3m75P_neto + salida_yex, 0 ) ) = 0 THEN 1 ELSE (LEAST( cau1m72P_neto + cau1m73P_neto, 0 )* -1 - LEAST( cau2m74P_neto, 0 ) - LEAST( cau3m75P_neto + salida_yex, 0 ) ) END WHERE "Date Hour" > now() - interval '6 days';
 
-UPDATE smec.cauchari_columnas SET cau1_exportada = GREATEST( cau1m72P_neto + cau1m73P_neto, 0)/(gen_grupos)*gen_iny WHERE "Date Hour" > now() - interval '5 days';
-UPDATE smec.cauchari_columnas SET cau2_exportada = GREATEST( cau2m74P_neto, 0)/(gen_grupos)*gen_iny WHERE "Date Hour" > now() - interval '5 days';
-UPDATE smec.cauchari_columnas SET cau3_exportada = GREATEST( cau3m75P_neto + salida_yex, 0)/(gen_grupos)*gen_iny WHERE "Date Hour" > now() - interval '5 days';
+UPDATE smec.cauchari_columnas SET cau1_exportada = GREATEST( cau1m72P_neto + cau1m73P_neto, 0)/(gen_grupos)*gen_iny WHERE "Date Hour" > now() - interval '6 days';
+UPDATE smec.cauchari_columnas SET cau2_exportada = GREATEST( cau2m74P_neto, 0)/(gen_grupos)*gen_iny WHERE "Date Hour" > now() - interval '6 days';
+UPDATE smec.cauchari_columnas SET cau3_exportada = GREATEST( cau3m75P_neto + salida_yex, 0)/(gen_grupos)*gen_iny WHERE "Date Hour" > now() - interval '6 days';
 
-UPDATE smec.cauchari_columnas SET cau1_importada_ = -1 * LEAST( cau1m72P_neto + cau1m73P_neto, 0)/(cspot_grupos)*cspot_iny WHERE "Date Hour" > now() - interval '5 days';
-UPDATE smec.cauchari_columnas SET cau2_importada = -1 * LEAST( cau2m74P_neto, 0)/(cspot_grupos)*cspot_iny WHERE "Date Hour" > now() - interval '5 days';
-UPDATE smec.cauchari_columnas SET cau3_importada = -1 * LEAST( cau3m75P_neto + salida_yex, 0)/(cspot_grupos)*cspot_iny WHERE "Date Hour" > now() - interval '5 days';
+UPDATE smec.cauchari_columnas SET cau1_importada_ = -1 * LEAST( cau1m72P_neto + cau1m73P_neto, 0)/(cspot_grupos)*cspot_iny WHERE "Date Hour" > now() - interval '6 days';
+UPDATE smec.cauchari_columnas SET cau2_importada = -1 * LEAST( cau2m74P_neto, 0)/(cspot_grupos)*cspot_iny WHERE "Date Hour" > now() - interval '6 days';
+UPDATE smec.cauchari_columnas SET cau3_importada = -1 * LEAST( cau3m75P_neto + salida_yex, 0)/(cspot_grupos)*cspot_iny WHERE "Date Hour" > now() - interval '6 days';
 
 INSERT INTO smec.cauchari_columnas_diario (SELECT DATE_TRUNC('day', "Date Hour") AS DATE FROM smec.cauchari_columnas GROUP BY DATE) ON CONFLICT ON CONSTRAINT uc_cauchari_columnas_diario DO NOTHING;
 
@@ -3053,7 +3043,7 @@ UPDATE smec.consolidador_cauchari SET cammesa_ppa = 0 WHERE date < '2020-09-26 0
 UPDATE smec.consolidador_cauchari SET scada_ppa = 0 WHERE date < '2020-09-26 00:00:00-03';
 UPDATE smec.consolidador_cauchari SET po_ppa = 0 WHERE date < '2020-09-26 00:00:00-03'; 
 
-ALTER TABLE smec.consolidador_cauchari ADD COLUMN consumo_cammesa numeric;
+ALTER TABLE smec.consolidador_cauchari ADD COLUMN consumo_cammesa numeric(30, 24);
 UPDATE smec.consolidador_cauchari SET consumo_cammesa = s.a FROM (SELECT DATE_TRUNC('hour', "Date Hour") as date2, SUM(cau1_importada_)/1000 as a FROM smec.cauchari_columnas GROUP BY date2) as s WHERE consolidador_cauchari.date = s.date2 AND consolidador_cauchari.cau = 'CAU1FV';
 UPDATE smec.consolidador_cauchari SET consumo_cammesa = s.a FROM (SELECT DATE_TRUNC('hour', "Date Hour") as date2, SUM(cau2_importada)/1000 as a FROM smec.cauchari_columnas GROUP BY date2) as s WHERE consolidador_cauchari.date = s.date2 AND consolidador_cauchari.cau = 'CAU2FV';
 UPDATE smec.consolidador_cauchari SET consumo_cammesa = s.a FROM (SELECT DATE_TRUNC('hour', "Date Hour") as date2, SUM(cau3_importada)/1000 as a FROM smec.cauchari_columnas GROUP BY date2) as s WHERE consolidador_cauchari.date = s.date2 AND consolidador_cauchari.cau = 'CAU3FV';
@@ -3364,3 +3354,4 @@ UPDATE smec.cauchari_columnas_reactiva SET reactiva_salida_gen_CAU1M73P = 0 wher
 UPDATE smec.cauchari_columnas_reactiva SET reactiva_salida_gen_CAU2M74P = 0 where cau_gen = 0 and date >= now() - interval '7 days';
 UPDATE smec.cauchari_columnas_reactiva SET reactiva_salida_gen_CAU3M75P = 0 where cau_gen = 0 and date >= now() - interval '7 days';
 UPDATE smec.cauchari_columnas_reactiva SET reactiva_salida_gen_yex = 0 where cau_gen = 0 and date >= now() - interval '7 days';
+

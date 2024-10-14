@@ -1,294 +1,90 @@
+-- Crear una tabla temporal para almacenar los valores variables (cantidad de días y parte de la URL)
+CREATE TEMP TABLE temp_smec_sources (
+    days_interval text,
+    url_part text,
+    id_value text
+);
 
-DROP TABLE IF EXISTS tmp_smec_helios;
-CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '1 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_helios (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\helios\POLLM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_helios 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_helios SET id = 'PSMADI01';
-UPDATE tmp_smec_helios SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_helios SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_helios.hour = hour_part.hour;
-UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_helios) AS date_hour WHERE tmp_smec_helios.hour = date_hour.hour;
-ALTER TABLE tmp_smec_helios ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.helios SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_helios ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_helios;
-CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+-- Insertar los valores correspondientes a la cantidad de días y parte de la URL
+INSERT INTO temp_smec_sources (days_interval, url_part, id_value)
+VALUES
+('1 days', 'POLLM21P_%s.csv' 'PSMADI01'),
+('2 days', 'POLLM21P_%s.csv' 'PSMADI01'),
+('3 days', 'POLLM21P_%s.csv' 'PSMADI01'),
+('4 days', 'POLLM21P_%s.csv' 'PSMADI01'),
+('5 days', 'POLLM21P_%s.csv' 'PSMADI01'),
+('6 days', 'POLLM21P_%s.csv' 'PSMADI01'),
+('7 days', 'POLLM21P_%s.csv' 'PSMADI01');
 
 DO $$
-DECLARE startdate text := to_char(current_date - interval '2 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_helios (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\helios\POLLM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+DECLARE
+    rec RECORD;
+    startdate text;
+BEGIN
+    -- Iterar sobre cada registro de la tabla temporal
+    FOR rec IN SELECT * FROM temp_smec_sources LOOP
+        -- Calcular la fecha startdate en función de los días del intervalo
+        startdate := to_char(current_date - rec.days_interval::interval, 'YYYYMMDD');
 
-ALTER TABLE tmp_smec_helios 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
+        -- Eliminar la tabla temporal si existe
+        DROP TABLE IF EXISTS tmp_smec_helios;
 
-UPDATE tmp_smec_helios SET id = 'PSMADI01';
-UPDATE tmp_smec_helios SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_helios SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_helios.hour = hour_part.hour;
-UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_helios) AS date_hour WHERE tmp_smec_helios.hour = date_hour.hour;
-ALTER TABLE tmp_smec_helios ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
+        -- Crear la tabla temporal tmp_smec_helios
+        CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text);
 
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
+        -- Descargar y copiar los datos desde el archivo CSVEXECUTE format(
+		EXECUTE format(
+			'COPY tmp_smec_helios (hour, "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", a, b, c, d) 
+			FROM %L DELIMITER '','' CSV HEADER',
+			'C:/Users/Administrador/GoesGreen SRL/I4 - AUTOPRN/helios/' || rec.url_part || '_' || startdate || '.csv'
+		);
 
-INSERT INTO smec.helios SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_helios ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
+        -- Eliminar las columnas innecesarias
+        ALTER TABLE tmp_smec_helios DROP COLUMN a,DROP COLUMN b,DROP COLUMN c, DROP COLUMN d;
 
--------------------------------------------------------------------------------------------------------------------------------------
+        -- Actualizar la columna id con el valor correspondiente
+        EXECUTE format('UPDATE tmp_smec_helios SET id = %L', rec.id_value);
 
-DROP TABLE IF EXISTS tmp_smec_helios;
-CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+        -- Actualizar la columna date y hour
+        UPDATE tmp_smec_helios 
+        SET date = date_part.date2 
+        FROM (SELECT split_part(hour, ' ', 2) AS date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) AS date_part;
 
-DO $$
-DECLARE startdate text := to_char(current_date - interval '3 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_helios (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\helios\POLLM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
+        UPDATE tmp_smec_helios 
+        SET hour = hour_part.hour2 
+        FROM (SELECT split_part(hour, ' ', 3) AS hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') AS hour_part 
+        WHERE tmp_smec_helios.hour = hour_part.hour;
 
-ALTER TABLE tmp_smec_helios 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
+        -- Ajustar la hora para el valor '24:00'
+        UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
 
-UPDATE tmp_smec_helios SET id = 'PSMADI01';
-UPDATE tmp_smec_helios SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_helios SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_helios.hour = hour_part.hour;
-UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_helios) AS date_hour WHERE tmp_smec_helios.hour = date_hour.hour;
-ALTER TABLE tmp_smec_helios ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
+        -- Concatenar la fecha y la hora en la columna "Date Hour"
+        UPDATE tmp_smec_helios 
+        SET "Date Hour" = date_hour.concat 
+        FROM (SELECT CONCAT(date, ' ', hour) AS concat, hour FROM tmp_smec_helios) AS date_hour 
+        WHERE tmp_smec_helios.hour = date_hour.hour;
 
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
+        -- Cambiar el tipo de la columna "Date Hour" a timestamptz
+        ALTER TABLE tmp_smec_helios 
+        ALTER COLUMN "Date Hour" TYPE timestamptz 
+        USING to_timestamp("Date Hour", 'MM/DD/YY HH24:MI');
 
-INSERT INTO smec.helios SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_helios ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
+        -- Ajustar las filas con la hora "00:00:00"
+        UPDATE tmp_smec_helios 
+        SET "Date Hour" = date_hour."Date Hour2" 
+        FROM (SELECT ("Date Hour" + interval '1 day') AS "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour 
+        WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
 
-DROP TABLE IF EXISTS tmp_smec_helios;
-CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
+        -- Insertar los datos en la tabla final
+        INSERT INTO smec.seeds 
+        SELECT "Date Hour", "SMEC IMPORTADA", "SMEC EXPORTADA", "Tension Media III (V)", id 
+        FROM tmp_smec_helios 
+        ON CONFLICT DO NOTHING;
+    END LOOP;
+END $$;
 
-DO $$
-DECLARE startdate text := to_char(current_date - interval '4 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_helios (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\helios\POLLM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_helios 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_helios SET id = 'PSMADI01';
-UPDATE tmp_smec_helios SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_helios SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_helios.hour = hour_part.hour;
-UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_helios) AS date_hour WHERE tmp_smec_helios.hour = date_hour.hour;
-ALTER TABLE tmp_smec_helios ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.helios SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_helios ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_helios;
-CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '5 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_helios (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\helios\POLLM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_helios 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_helios SET id = 'PSMADI01';
-UPDATE tmp_smec_helios SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_helios SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_helios.hour = hour_part.hour;
-UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_helios) AS date_hour WHERE tmp_smec_helios.hour = date_hour.hour;
-ALTER TABLE tmp_smec_helios ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.helios SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_helios ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_helios;
-CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '6 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_helios (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\helios\POLLM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_helios 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_helios SET id = 'PSMADI01';
-UPDATE tmp_smec_helios SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_helios SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_helios.hour = hour_part.hour;
-UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_helios) AS date_hour WHERE tmp_smec_helios.hour = date_hour.hour;
-ALTER TABLE tmp_smec_helios ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.helios SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_helios ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-
-DROP TABLE IF EXISTS tmp_smec_helios;
-CREATE TEMP TABLE tmp_smec_helios ("Date Hour" text, "SMEC IMPORTADA" numeric, "SMEC EXPORTADA" numeric, "Tension Media III (V)" numeric, id text, a text, b text, c text, d text, date text, hour text); 
-
-DO $$
-DECLARE startdate text := to_char(current_date - interval '7 days', 'YYYYMMDD');
-Begin 
-EXECUTE format(
-			'COPY tmp_smec_helios (hour,
-"SMEC IMPORTADA" ,
-"SMEC EXPORTADA",
-"Tension Media III (V)",
-a,
-b,
-c,
-d)
-FROM ''C:\Users\Administrador\GoesGreen SRL\I4 - AUTOPRN\helios\POLLM21P_%s.csv''
-DELIMITER '',''
-CSV HEADER',
-           startdate
-        );
-END $$ ;
-
-ALTER TABLE tmp_smec_helios 
-DROP COLUMN a,
-DROP COLUMN b,
-DROP COLUMN c,
-DROP COLUMN d;
-
-UPDATE tmp_smec_helios SET id = 'PSMADI01';
-UPDATE tmp_smec_helios SET date = date_part.date2 FROM (SELECT split_part(hour,' ',2) as date2 FROM tmp_smec_helios WHERE hour LIKE '%/%' LIMIT 1) as date_part;
-UPDATE tmp_smec_helios SET hour = hour_part.hour2 FROM (SELECT split_part(hour,' ',3) as hour2, hour FROM tmp_smec_helios WHERE hour LIKE '%/%') as hour_part WHERE tmp_smec_helios.hour = hour_part.hour;
-UPDATE tmp_smec_helios SET hour = '00:00' WHERE hour LIKE '24%';
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour.concat FROM (SELECT CONCAT(date,' ', hour), hour FROM tmp_smec_helios) AS date_hour WHERE tmp_smec_helios.hour = date_hour.hour;
-ALTER TABLE tmp_smec_helios ALTER COLUMN "Date Hour" TYPE timestamptz USING to_timestamp("Date Hour", 'MM/DD/YY hh24:mi:');
-
-UPDATE tmp_smec_helios SET "Date Hour" = date_hour."Date Hour2" FROM (SELECT ("Date Hour" + interval '1 day') as "Date Hour2" FROM tmp_smec_helios WHERE "Date Hour"::text LIKE '% 00:00:00%') AS date_hour WHERE tmp_smec_helios."Date Hour"::text LIKE '% 00:00:00%';
-
-INSERT INTO smec.helios SELECT "Date Hour", "SMEC EXPORTADA", "SMEC IMPORTADA", "Tension Media III (V)", id FROM tmp_smec_helios ON CONFLICT DO NOTHING;
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------------------------------------------------------------
+-- Eliminar la tabla temporal después de su uso
+DROP TABLE IF EXISTS temp_smec_sources;
 INSERT INTO smec.helios_columnas (
 	SELECT "Date Hour" FROM smec.helios WHERE ("Date Hour") NOT IN (
 		SELECT date
@@ -318,8 +114,8 @@ FROM (
 WHERE arb1.date2 = smec.helios_columnas.date
 	AND smec.helios_columnas.exportada IS NULL;
 
--------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+
 DELETE FROM smec.helios_comparacion_smec_po;
 
 INSERT INTO smec.helios_comparacion_smec_po(grupo, date, po_exportada, smec_exportada, diferencia) SELECT smec.po_general_renovables.grupo
@@ -365,7 +161,6 @@ WHERE date_hour >= DATE_TRUNC('day', now()) - interval '4 years'
 ORDER BY grupo
 	,date_hour ON CONFLICT DO NOTHING;
 ----------------------------------------------------CONSOLIDADOR---------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------
 DELETE FROM smec.consolidador_helios ;
 DROP TABLE IF EXISTS consolidador_helios_temp;
 CREATE TEMP TABLE consolidador_helios_temp (date timestamptz, id text, exportada_cammesa numeric);
@@ -378,13 +173,10 @@ insert into smec.consolidador_helios (id, date)
 SELECT * FROM smec.helios_ids CROSS JOIN generate_series(DATE_TRUNC('hour', now() - interval '1 year') ,DATE_TRUNC('hour', now()), '1 hour')  ON CONFLICT DO NOTHING;
 ----------------------------------------------------------------------------
 
-------------------------------------------------------------------------------------------------------------------------------------------
 UPDATE smec.consolidador_helios SET exportada_cammesa = exportada_cammesa/1000 ;
 UPDATE smec.consolidador_helios SET po_exportada = s.a FROM (SELECT date_hour - interval '1 hour' as date, grupo as id, egenerada as a FROM smec.po_general_renovables WHERE grupo LIKE 'PSMADI01') as s WHERE consolidador_helios.date = s.date AND consolidador_helios.id = s.id ;
 
-
---------------------------------------------------------------------------------------------------------------------------------------------
-
+----------------------------------------------------------------------------------------------------
 UPDATE smec.consolidador_helios SET cammesa_ppa = s.a FROM (SELECT exportada_cammesa as a, date, id FROM smec.consolidador_helios WHERE exportada_cammesa <= 2.4 ) as s WHERE s.date = consolidador_helios.date AND s.id = consolidador_helios.id ;
 UPDATE smec.consolidador_helios SET cammesa_spot = exportada_cammesa - 2.4 ;
 UPDATE smec.consolidador_helios SET cammesa_spot = 0 WHERE cammesa_spot <= 0 ;
